@@ -85,11 +85,11 @@ void move_clockwise() {
   }
 }
 
-uint16_t get_current_from_channel(uint8_t channel) {
+float get_current_from_channel(uint8_t channel) {
   // pass 0 for channel A and 1 for channel B
 
   adc_select_input(channel);
-  uint16_t result = adc_read();
+  float result = adc_read();
   result = result * conversion_factor;
   return result;
 }
