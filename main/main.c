@@ -2,6 +2,7 @@
 #include "hardware/adc.h"
 #include "pico/stdlib.h"
 #include <stdio.h>
+#include <math.h>
 
 #define IN1 2
 #define IN2 3
@@ -17,9 +18,22 @@ volatile int timer_status = 0;
 volatile uint8_t encoder_status = 0;
 volatile uint8_t step_index = 0;
 
+typedef struct {
+  float cur_a;
+  float cur_b;
+} current_ab;
+
+typedef struct {
+  float cur_alpha;
+  float cur_beta;
+} current_qd;
+
+current_ab three_phase;
+current_qd quadrature;
+
 float current_angle = 0.0;
-float current_phase_a = 0.0;
-float current_phase_b = 0.0;
+// float current_phase_a = 0.0;
+// float current_phase_b = 0.0;
 
 uint8_t in_seq[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 1, 0},
                         {0, 0, 1}, {0, 0, 1}, {1, 0, 0}};
@@ -53,9 +67,9 @@ void align_rotor() {
   gpio_put(EN3, 1);
   gpio_put(IN3, 0); // Disable third winding
 
-  current_angle = 30.0; // Assume rotor is now aligned to 90 degrees
+  current_angle = 330.0; // Assume rotor is now aligned to 330 degrees
 
-  printf("Rotor aligned at 30 degrees.\n");
+  printf("Rotor aligned at 330 degrees.\n");
 
   busy_wait_ms(500); // Give time for the rotor to stabilize
 
@@ -85,17 +99,25 @@ void move_clockwise() {
   }
 }
 
-float get_current_from_channel(uint8_t channel) {
-  // pass 0 for channel A and 1 for channel B
+current_ab get_current_ab() {
+  current_ab res;
+  adc_select_input(0);
+  res.cur_a = adc_read() * conversion_factor;
+  adc_select_input(1);
+  res.cur_b = adc_read() * conversion_factor;
+  return res;
+}
 
-  adc_select_input(channel);
-  float result = adc_read();
-  result = result * conversion_factor;
-  return result;
+current_qd get_clark_transform(current_ab cur_ab){
+  current_qd res;
+  res.cur_alpha = cur_ab.cur_a;
+  res.cur_beta = cur_ab.cur_a / sqrt(3) + 2 * cur_ab.cur_b / sqrt(3);
+  return res;
 }
 
 int main() {
   stdio_init_all();
+  sleep_ms(2000); 
 
   // Configure the GPIOs for the motor
   gpio_init(IN1);
@@ -139,6 +161,10 @@ int main() {
 
   // Main loop
   while (1) {
+
+    // update current read
+    three_phase = get_current_ab();
+
     // Move the motor based on the timer callback
     move_clockwise();
 
@@ -152,11 +178,9 @@ int main() {
       }
 
       encoder_status = 0;
-      current_phase_a = get_current_from_channel(0);
-      current_phase_b = get_current_from_channel(1);
-      printf("Current angle: %.2f degrees\n", current_angle);
-      printf("Current phase A current: %.2f mA\n", current_phase_a);
-      printf("Current phase B current: %.2f mA\n", current_phase_b);
+      // printf("Current angle: %.2f degrees\n", current_angle);
+      // printf("Current phase A: %.2f mA\n", three_phase.cur_a);
+      // printf("Current phase B: %.2f mA\n", three_phase.cur_b);
     }
   }
 }
