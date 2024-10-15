@@ -34,6 +34,14 @@ typedef struct {
   float v_beta;
 } voltage_clark;
 
+typedef struct {
+  float duty_a;
+  float duty_b;
+  float duty_c;
+} space_vector;
+
+void init_pwm(int pwm_pin_gp, uint resolution, uint *slice_num, uint *chan_num);
+
 bool timer_0_callback(repeating_timer_t *rt);
 bool timer_1_callback(repeating_timer_t *rt);
 void encoder_callback(uint gpio, uint32_t events);
@@ -44,5 +52,6 @@ current_clark get_clark_transform(current_ab cur_ab);
 current_park get_park_transform(current_clark cur_clark);
 voltage_pi update_control(current_park cur_park);
 voltage_clark get_inverse_park_transform(current_park cur_park);
+space_vector get_space_vector(voltage_clark cur_clark);
 
 #endif // UTILS_H
