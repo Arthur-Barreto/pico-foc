@@ -31,5 +31,6 @@ void move_clockwise();
 current_ab get_current_ab();
 current_clark get_clark_transform(current_ab cur_ab);
 current_park get_park_transform(current_clark cur_clark);
+current_clark get_inverse_park_transform(current_park cur_park);
 
 #endif // UTILS_H

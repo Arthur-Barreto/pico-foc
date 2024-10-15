@@ -87,3 +87,12 @@ current_park get_park_transform(current_clark cur_clark) {
               cos(current_angle) * cur_clark.cur_beta;
   return res;
 }
+
+current_clark get_inverse_park_transform(current_park cur_park) {
+  current_clark res;
+  res.cur_alpha =
+      cos(current_angle) * cur_park.cur_d - sin(current_angle) * cur_park.cur_q;
+  res.cur_beta =
+      sin(current_angle) * cur_park.cur_d + cos(current_angle) * cur_park.cur_q;
+  return res;
+}
