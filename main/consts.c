@@ -13,3 +13,16 @@ volatile uint8_t timer_currents_status = 0;
 volatile uint8_t encoder_status = 0;
 volatile uint8_t step_index = 0;
 volatile float current_angle = 0.0;
+
+float id_ref = 0.0;
+float iq_ref = 0.5;
+
+float kp = 0.05;
+float ki = 200.0;
+
+float id_error, iq_error;
+float id_integrator = 0.0;
+float iq_integrator = 0.0;
+float id_output, iq_output;
+
+float integrator_max = 10;

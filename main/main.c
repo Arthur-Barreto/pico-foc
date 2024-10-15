@@ -3,6 +3,8 @@
 current_ab three_phase;
 current_clark quadrature;
 current_park rotated;
+voltage_pi reference_voltage;
+voltage_clark quadrature_voltage;
 
 int main() {
   stdio_init_all();
@@ -65,6 +67,9 @@ int main() {
     if (timer_currents_status) {
       three_phase = get_current_ab();
       quadrature = get_clark_transform(three_phase);
+      rotated = get_park_transform(quadrature);
+      reference_voltage = update_control(rotated);
+      quadrature_voltage = get_inverse_park_transform(rotated);
 
       timer_currents_status = 0;
     }

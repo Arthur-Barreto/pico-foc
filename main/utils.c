@@ -88,11 +88,39 @@ current_park get_park_transform(current_clark cur_clark) {
   return res;
 }
 
-current_clark get_inverse_park_transform(current_park cur_park) {
-  current_clark res;
-  res.cur_alpha =
-      cos(current_angle) * cur_park.cur_d - sin(current_angle) * cur_park.cur_q;
-  res.cur_beta =
-      sin(current_angle) * cur_park.cur_d + cos(current_angle) * cur_park.cur_q;
+voltage_pi update_control(current_park cur_park) {
+  voltage_pi res;
+  id_error = id_ref - cur_park.cur_d;
+  iq_error = iq_ref - cur_park.cur_q;
+
+  id_integrator += id_error;
+  iq_integrator += iq_error;
+
+  res.v_d = kp * id_error + ki * id_integrator;
+  res.v_q = kp * iq_error + ki * iq_integrator;
+
+  // clamp id integrator
+  if (id_integrator > integrator_max) {
+    id_integrator = integrator_max;
+  } else if (id_integrator < -integrator_max) {
+    id_integrator = -integrator_max;
+  }
+
+  // clamp iq integrator
+  if (iq_integrator > integrator_max) {
+    iq_integrator = integrator_max;
+  } else if (iq_integrator < -integrator_max) {
+    iq_integrator = -integrator_max;
+  }
+
+  return res;
+}
+
+voltage_clark get_inverse_park_transform(current_park cur_park) {
+  voltage_clark res;
+  res.v_alpha = cos(current_angle) * cur_park.cur_d -
+                sin(current_angle) * cur_park.cur_q;
+  res.v_beta = sin(current_angle) * cur_park.cur_d +
+               cos(current_angle) * cur_park.cur_q;
   return res;
 }

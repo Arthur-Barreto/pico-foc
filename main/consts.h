@@ -30,4 +30,18 @@ extern volatile uint8_t step_index;
 // Angle of the current (used in FOC or other control algorithms)
 extern volatile float current_angle;
 
+// pi control section
+extern float id_ref;
+extern float iq_ref;
+
+extern float kp;
+extern float ki;
+
+extern float id_error, iq_error;
+extern float id_integrator;
+extern float iq_integrator;
+extern float id_output, iq_output;
+
+extern float integrator_max;
+
 #endif // CONSTS_H
