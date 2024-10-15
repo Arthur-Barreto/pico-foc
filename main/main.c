@@ -3,6 +3,7 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 #include <math.h>
+#include "utils.h"
 
 #define IN1 2
 #define IN2 3
@@ -15,6 +16,7 @@
 #define CUR_B 27
 
 volatile int timer_status = 0;
+volatile int timer_currents_status = 0;
 volatile uint8_t encoder_status = 0;
 volatile uint8_t step_index = 0;
 
@@ -26,14 +28,18 @@ typedef struct {
 typedef struct {
   float cur_alpha;
   float cur_beta;
-} current_qd;
+} current_clark;
+
+typedef struct {
+  float cur_d;
+  float cur_q;
+} current_park;
 
 current_ab three_phase;
-current_qd quadrature;
+current_clark quadrature;
+current_park rotated;
 
 float current_angle = 0.0;
-// float current_phase_a = 0.0;
-// float current_phase_b = 0.0;
 
 uint8_t in_seq[6][3] = {{1, 0, 0}, {0, 1, 0}, {0, 1, 0},
                         {0, 0, 1}, {0, 0, 1}, {1, 0, 0}};
@@ -45,7 +51,13 @@ const float conversion_factor = 3.3f / (1 << 12);
 // Timer callback to control motor movement
 bool timer_0_callback(repeating_timer_t *rt) {
   timer_status = 1;
-  return true; // Keep repeating
+  return true;
+}
+
+// timer to update currents values
+bool timer_1_callback(repeating_timer_t *rt) {
+  timer_currents_status = 1;
+  return true;
 }
 
 // Encoder interrupt callback
@@ -108,10 +120,17 @@ current_ab get_current_ab() {
   return res;
 }
 
-current_qd get_clark_transform(current_ab cur_ab){
-  current_qd res;
+current_clark get_clark_transform(current_ab cur_ab){
+  current_clark res;
   res.cur_alpha = cur_ab.cur_a;
   res.cur_beta = cur_ab.cur_a / sqrt(3) + 2 * cur_ab.cur_b / sqrt(3);
+  return res;
+}
+
+current_park get_park_transform(current_clark cur_clark) {
+  current_park res;
+  res.cur_d = cos(current_angle) * cur_clark.cur_alpha + sin(current_angle) * cur_clark.cur_beta;
+  res.cur_q = -sin(current_angle) * cur_clark.cur_alpha + cos(current_angle) * cur_clark.cur_beta;
   return res;
 }
 
@@ -159,14 +178,26 @@ int main() {
     return 1;
   }
 
+  // set up timer to update current values
+  int timer_1_hz = 10000;
+  repeating_timer_t timer_1;
+
+  if (!add_repeating_timer_us(-1000000 / timer_1_hz, timer_1_callback, NULL,
+                              &timer_1)) {
+    printf("Failed to add timer 1\n");
+    return 1;
+  }
+
   // Main loop
   while (1) {
 
     // update current read
-    three_phase = get_current_ab();
+    if (timer_currents_status) {
+      three_phase = get_current_ab();
+      quadrature = get_clark_transform(three_phase);
 
-    // Move the motor based on the timer callback
-    move_clockwise();
+      timer_currents_status = 0;
+    }
 
     // Encoder handling
     if (encoder_status) {
@@ -178,9 +209,9 @@ int main() {
       }
 
       encoder_status = 0;
-      // printf("Current angle: %.2f degrees\n", current_angle);
-      // printf("Current phase A: %.2f mA\n", three_phase.cur_a);
-      // printf("Current phase B: %.2f mA\n", three_phase.cur_b);
     }
+
+    // Move the motor based on the timer callback
+    move_clockwise();
   }
 }
