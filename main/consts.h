@@ -14,6 +14,13 @@
 #define CUR_A 26
 #define CUR_B 27
 
+// PWM frequency
+#define PWM_FREQ 1e6
+#define PWM_RES 4096
+
+// motor voltage
+#define MOTOR_VOLTAGE 12
+
 // Conversion factor for ADC (3.3V / 12-bit resolution)
 extern const float CONVERSION_FACTOR;
 

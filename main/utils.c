@@ -141,17 +141,30 @@ voltage_clark get_inverse_park_transform(current_park cur_park) {
 
 space_vector get_space_vector(voltage_clark cur_clark) {
   space_vector res;
+
+  // Step 1: Calculate V_ref and theta_ref (in radians)
   float v_ref = sqrt(cur_clark.v_alpha * cur_clark.v_alpha +
                      cur_clark.v_beta * cur_clark.v_beta);
   float theta_ref = atan2(cur_clark.v_beta, cur_clark.v_alpha);
-  uint8_t sector = (uint8_t)((theta_ref + M_PI) / (M_PI / 3));
 
-  float ts = 1.0 / 1e6; // 1 MHz PWM frequency
-  float t1 = ts * (v_ref * sin((M_PI / 3) - theta_ref) /
-                   12); // 12 = voltage from motor
-  float t2 = ts * (v_ref * sin(theta_ref) / 12);
-  float t0 = ts - (t1 + t2);
+  // Step 2: Determine the sector (radians divided by pi/3, which is 60 degrees)
+  uint8_t sector = (uint8_t)(floor(theta_ref / (M_PI / 3))) + 1;
+  if (sector > 6) {
+    sector = 6; // Sector must be between 1 and 6
+  }
 
+  // Step 3: Calculate switching times T1, T2, T0 based on the sector
+  float ts = 1.0 / PWM_FREQ; // PWM period (1 MHz frequency as you specified)
+  float angle_in_sector =
+      theta_ref - (sector - 1) * (M_PI / 3); // Relative angle within sector
+
+  float t1 = ts * (v_ref * sin((M_PI / 3) - angle_in_sector)) /
+             MOTOR_VOLTAGE; // Time for first active vector
+  float t2 = ts * (v_ref * sin(angle_in_sector)) /
+             MOTOR_VOLTAGE;  // Time for second active vector
+  float t0 = ts - (t1 + t2); // Zero vector time (remaining time)
+
+  // Step 4: Calculate duty cycles for phases A, B, C
   float duty_a, duty_b, duty_c;
   switch (sector) {
   case 1:
@@ -170,7 +183,7 @@ space_vector get_space_vector(voltage_clark cur_clark) {
     duty_c = (t2 + t0 / 2) / ts;
     break;
   case 4:
-    duty_a = (t0 / 2) / ts;
+    duty_a = t0 / (2 * ts);
     duty_b = t0 / (2 * ts);
     duty_c = (t1 + t2 + t0 / 2) / ts;
     break;
@@ -190,8 +203,22 @@ space_vector get_space_vector(voltage_clark cur_clark) {
     duty_c = 0;
     break;
   }
+
+  // Step 5: Store the results in the structure
   res.duty_a = duty_a;
   res.duty_b = duty_b;
   res.duty_c = duty_c;
+
   return res;
+}
+
+void motor_control(space_vector duty_cycle, pwm_config_space_vector pwm_a,
+                   pwm_config_space_vector pwm_b,
+                   pwm_config_space_vector pwm_c) {
+  pwm_set_chan_level(pwm_a.slice_num, pwm_a.chan_num,
+                     (uint16_t)(duty_cycle.duty_a * PWM_RES));
+  pwm_set_chan_level(pwm_b.slice_num, pwm_b.chan_num,
+                     (uint16_t)(duty_cycle.duty_b * PWM_RES));
+  pwm_set_chan_level(pwm_c.slice_num, pwm_c.chan_num,
+                     (uint16_t)(duty_cycle.duty_c * PWM_RES));
 }

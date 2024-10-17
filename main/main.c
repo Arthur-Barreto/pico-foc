@@ -6,6 +6,7 @@ current_park rotated;
 voltage_pi reference_voltage;
 voltage_clark quadrature_voltage;
 space_vector duty_cycle;
+pwm_config_space_vector pwm_a, pwm_b, pwm_c;
 
 int main() {
   stdio_init_all();
@@ -27,12 +28,19 @@ int main() {
   gpio_set_dir(EN3, GPIO_OUT);
 
   // configure pwm for motor
-  int pwm_a_slice, pwm_a_chan;
-  int pwm_b_slice, pwm_b_chan;
-  int pwm_c_slice, pwm_c_chan;
+  uint pwm_a_slice, pwm_a_chan;
+  uint pwm_b_slice, pwm_b_chan;
+  uint pwm_c_slice, pwm_c_chan;
   init_pwm(IN1, 4096, &pwm_a_slice, &pwm_a_chan);
   init_pwm(IN2, 4096, &pwm_b_slice, &pwm_b_chan);
   init_pwm(IN3, 4096, &pwm_c_slice, &pwm_c_chan);
+
+  pwm_a.slice_num = pwm_a_slice;
+  pwm_a.chan_num = pwm_a_chan;
+  pwm_b.slice_num = pwm_b_slice;
+  pwm_b.chan_num = pwm_b_chan;
+  pwm_c.slice_num = pwm_c_slice;
+  pwm_c.chan_num = pwm_c_chan;
 
   // configure adc
   adc_init();
@@ -80,6 +88,7 @@ int main() {
       reference_voltage = update_control(rotated);
       quadrature_voltage = get_inverse_park_transform(rotated);
       duty_cycle = get_space_vector(quadrature_voltage);
+      motor_control(duty_cycle, pwm_a, pwm_b, pwm_c);
 
       timer_currents_status = 0;
     }
@@ -98,11 +107,11 @@ int main() {
 
     // Move the motor based on the timer callback
     // move_clockwise();
-    gpio_put(EN1, 1);
-    gpio_put(EN2, 1);
-    gpio_put(EN3, 1);
-    pwm_set_chan_level(pwm_a_slice, pwm_a_chan, 4096 * 0.083);
-    pwm_set_chan_level(pwm_b_slice, pwm_b_chan, 4096 * 0.167);
-    pwm_set_chan_level(pwm_c_slice, pwm_c_chan, 4096 * 0.25);
+    // gpio_put(EN1, 1);
+    // gpio_put(EN2, 1);
+    // gpio_put(EN3, 1);
+    // pwm_set_chan_level(pwm_a_slice, pwm_a_chan, 4096 * 0.083);
+    // pwm_set_chan_level(pwm_b_slice, pwm_b_chan, 4096 * 0.167);
+    // pwm_set_chan_level(pwm_c_slice, pwm_c_chan, 4096 * 0.25);
   }
 }

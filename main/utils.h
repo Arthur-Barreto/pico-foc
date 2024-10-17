@@ -40,6 +40,11 @@ typedef struct {
   float duty_c;
 } space_vector;
 
+typedef struct {
+  uint slice_num;
+  uint chan_num;
+} pwm_config_space_vector;
+
 void init_pwm(int pwm_pin_gp, uint resolution, uint *slice_num, uint *chan_num);
 
 bool timer_0_callback(repeating_timer_t *rt);
@@ -53,5 +58,8 @@ current_park get_park_transform(current_clark cur_clark);
 voltage_pi update_control(current_park cur_park);
 voltage_clark get_inverse_park_transform(current_park cur_park);
 space_vector get_space_vector(voltage_clark cur_clark);
+void motor_control(space_vector duty_cycle, pwm_config_space_vector pwm_a,
+                   pwm_config_space_vector pwm_b,
+                   pwm_config_space_vector pwm_c);
 
 #endif // UTILS_H

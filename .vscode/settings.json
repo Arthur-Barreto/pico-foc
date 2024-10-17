@@ -42,7 +42,9 @@
          }
 },
 "files.associations": {
-    "cstdint": "c"
+    "cstdint": "c",
+    "utils.h": "c",
+    "consts.h": "c"
 }
 
      
