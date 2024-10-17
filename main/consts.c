@@ -15,7 +15,7 @@ volatile uint8_t step_index = 0;
 volatile float current_angle = 0.0;
 
 float id_ref = 0.0;
-float iq_ref = 0.25;
+float iq_ref = 0.5;
 
 float kp = 0.05;
 float ki = 200.0;
