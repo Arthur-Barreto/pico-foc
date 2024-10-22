@@ -66,22 +66,22 @@ int main() {
                               &timer_1)) {
     printf("Failed to add timer 1\n");
     return 1;
-
-    // Align the rotor before starting the motor
-    align_rotor(pwm_a, pwm_b, pwm_c);
-    // Call alarm_callback in 1000 ms
-    alarm_id_t alarm = add_alarm_in_ms(1000, alarm_callback, NULL, false);
-
-    if (!alarm) {
-      printf("Failed to alarm to start motor\n");
-    }
-    while (!timer_fired) {
-      move_clockwise_pwm(pwm_a, pwm_b, pwm_c);
-    }
-
-    printf("Motor started\n");
   }
 
+  // Align the rotor before starting the motor
+  align_rotor(pwm_a, pwm_b, pwm_c);
+  // Call alarm_callback in 1000 ms
+  alarm_id_t alarm = add_alarm_in_ms(1000, alarm_callback, NULL, false);
+
+  if (!alarm) {
+    printf("Failed to alarm to start motor\n");
+    return 1;
+  }
+  while (!timer_fired) {
+    move_clockwise_pwm(pwm_a, pwm_b, pwm_c);
+  }
+
+  printf("Motor started\n");
   // Main loop
   while (1) {
 
