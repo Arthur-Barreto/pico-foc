@@ -44,7 +44,8 @@
 "files.associations": {
     "cstdint": "c",
     "utils.h": "c",
-    "consts.h": "c"
+    "consts.h": "c",
+    "adc.h": "c"
 }
 
      

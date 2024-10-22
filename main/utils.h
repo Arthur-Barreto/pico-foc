@@ -49,8 +49,10 @@ void init_pwm(int pwm_pin_gp, uint resolution, uint *slice_num, uint *chan_num);
 
 bool timer_0_callback(repeating_timer_t *rt);
 bool timer_1_callback(repeating_timer_t *rt);
+int64_t alarm_callback(alarm_id_t id, void *user_data);
 void encoder_callback(uint gpio, uint32_t events);
-void align_rotor();
+void align_rotor(pwm_config_space_vector pwm_a, pwm_config_space_vector pwm_b,
+                 pwm_config_space_vector pwm_c);
 void move_clockwise();
 void move_clockwise_pwm(pwm_config_space_vector pwm_a,
                         pwm_config_space_vector pwm_b,

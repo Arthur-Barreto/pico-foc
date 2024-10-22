@@ -12,6 +12,11 @@ bool timer_1_callback(repeating_timer_t *rt) {
   return true;
 }
 
+int64_t alarm_callback(alarm_id_t id, void *user_data) {
+  timer_fired = true;
+  return 0;
+}
+
 // Encoder interrupt callback
 void encoder_callback(uint gpio, uint32_t events) {
   if (gpio == ENCODER) {
@@ -20,16 +25,16 @@ void encoder_callback(uint gpio, uint32_t events) {
 }
 
 // Function to align rotor to a known position
-void align_rotor() {
-  // Set the motor to a known position
-  gpio_put(EN1, 0);
-  gpio_put(IN1, 0); // Set first winding
+void align_rotor(pwm_config_space_vector pwm_a, pwm_config_space_vector pwm_b,
+                 pwm_config_space_vector pwm_c) {
 
-  gpio_put(EN2, 1);
-  gpio_put(IN2, 1); // Set second winding
-
+  gpio_put(EN1, 1);
+  gpio_put(EN2, 0);
   gpio_put(EN3, 1);
-  gpio_put(IN3, 0); // Disable third winding
+  // Set the motor to a known position
+  pwm_set_chan_level(pwm_a.slice_num, pwm_a.chan_num, 1 * PWM_RES);
+  pwm_set_chan_level(pwm_b.slice_num, pwm_b.chan_num, 0 * PWM_RES);
+  pwm_set_chan_level(pwm_c.slice_num, pwm_c.chan_num, 0 * PWM_RES);
 
   current_angle = 330.0; // Assume rotor is now aligned to 330 degrees
 

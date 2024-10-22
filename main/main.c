@@ -48,9 +48,6 @@ int main() {
   gpio_set_irq_enabled_with_callback(ENCODER, GPIO_IRQ_EDGE_FALL, true,
                                      &encoder_callback);
 
-  // Align the rotor before starting the motor
-  align_rotor();
-
   // Set up a repeating timer for motor control (10 Hz = 100 ms interval)
   int timer_0_hz = 200;
   repeating_timer_t timer_0;
@@ -69,6 +66,20 @@ int main() {
                               &timer_1)) {
     printf("Failed to add timer 1\n");
     return 1;
+
+    // Align the rotor before starting the motor
+    align_rotor(pwm_a, pwm_b, pwm_c);
+    // Call alarm_callback in 1000 ms
+    alarm_id_t alarm = add_alarm_in_ms(1000, alarm_callback, NULL, false);
+
+    if (!alarm) {
+      printf("Failed to alarm to start motor\n");
+    }
+    while (!timer_fired) {
+      move_clockwise_pwm(pwm_a, pwm_b, pwm_c);
+    }
+
+    printf("Motor started\n");
   }
 
   // Main loop
@@ -82,7 +93,7 @@ int main() {
       reference_voltage = update_control(rotated);
       quadrature_voltage = get_inverse_park_transform(rotated);
       duty_cycle = get_space_vector(quadrature_voltage);
-      // motor_control(duty_cycle, pwm_a, pwm_b, pwm_c);
+      motor_control(duty_cycle, pwm_a, pwm_b, pwm_c);
 
       timer_currents_status = 0;
     }
@@ -101,7 +112,7 @@ int main() {
 
     // Move the motor based on the timer callback
     // move_clockwise();
-    move_clockwise_pwm(pwm_a, pwm_b, pwm_c);
+    // move_clockwise_pwm(pwm_a, pwm_b, pwm_c);
     // gpio_put(EN1, 1);
     // gpio_put(EN2, 1);
     // gpio_put(EN3, 1);

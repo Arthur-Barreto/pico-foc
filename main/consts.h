@@ -31,6 +31,7 @@ extern const uint8_t en_seq[6][3];
 // Volatile variables that are shared between main loop and ISR
 extern volatile uint8_t timer_status;
 extern volatile uint8_t timer_currents_status;
+extern volatile uint8_t timer_fired;
 extern volatile uint8_t encoder_status;
 extern volatile uint8_t step_index;
 
