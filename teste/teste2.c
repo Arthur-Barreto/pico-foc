@@ -242,7 +242,7 @@ space_vector get_space_vector(voltage_clark cur_clark) {
   return res;
 }
 
-void            motor_control(space_vector duty_cycle, pwm_config_space_vector pwm_a,
+void motor_control(space_vector duty_cycle, pwm_config_space_vector pwm_a,
                    pwm_config_space_vector pwm_b,
                    pwm_config_space_vector pwm_c) {
   pwm_set_chan_level(pwm_a.slice_num, pwm_a.chan_num,
