@@ -1,7 +1,7 @@
 #include "utils.h"
 
 // Timer callback to control motor movement
-bool        timer_0_callback(repeating_timer_t *rt) {
+bool timer_0_callback(repeating_timer_t *rt) {
   timer_status = 1;
   return true;
 }
@@ -242,14 +242,14 @@ space_vector get_space_vector(voltage_clark cur_clark) {
   return res;
 }
 
-void             motor_control(space_vector duty_cycle, pwm_config_space_vector pwm_a,
+void motor_control(space_vector duty_cycle, pwm_config_space_vector pwm_a,
                    pwm_config_space_vector pwm_b,
                    pwm_config_space_vector pwm_c) {
   pwm_set_chan_level(pwm_a.slice_num, pwm_a.chan_num,
-                                (uint16_t)(duty_cycle.duty_a * PWM_RES));
+                     (uint16_t)(duty_cycle.duty_a * PWM_RES));
   pwm_set_chan_level(pwm_b.slice_num, pwm_b.chan_num,
                      (uint16_t)(duty_cycle.duty_b * PWM_RES));
-                    pwm_set_chan_level(pwm_c.slice_num, pwm_c.chan_num,
+  pwm_set_chan_level(pwm_c.slice_num, pwm_c.chan_num,
                      (uint16_t)(duty_cycle.duty_c * PWM_RES));
 
   gpio_put(EN1, duty_cycle.duty_a == 0 ? 0 : 1);
