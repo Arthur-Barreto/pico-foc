@@ -7,15 +7,15 @@ bool timer_0_callback(repeating_timer_t *rt) {
 }
 
 // timer to update currents values
-bool     timer_1_callback(repeating_timer_t *rt) {
+bool timer_1_callback(repeating_timer_t *rt) {
   timer_currents_status = 1;
   return true;
 }
 
-        int64_t alarm_callback(alarm_id_t id, void *user_data) {
-        timer_fired = true;
-        return 0;
-        }
+int64_t alarm_callback(alarm_id_t id, void *user_data) {
+  timer_fired = true;
+  return 0;
+}
 
 // Encoder interrupt callback
 void encoder_callback(uint gpio, uint32_t events) {
@@ -172,18 +172,14 @@ voltage_clark get_inverse_park_transform(current_park cur_park) {
 space_vector get_space_vector(voltage_clark cur_clark) {
   space_vector res;
 
-
-
-
-
   // Step 1: Calculate V_ref and theta_ref (in radians)
-  float     v_ref = sqrt(cur_clark.v_alpha * cur_clark.v_alpha +
+  float v_ref = sqrt(cur_clark.v_alpha * cur_clark.v_alpha +
                      cur_clark.v_beta * cur_clark.v_beta);
   float theta_ref = atan2(cur_clark.v_beta, cur_clark.v_alpha);
 
   // Step 2: Determine the sector (radians divided by pi/3, which is 60 degrees)
-    uint8_t sector = (uint8_t)(floor(theta_ref / (M_PI / 3))) + 1;
-         if (sector > 6) {
+  uint8_t sector = (uint8_t)(floor(theta_ref / (M_PI / 3))) + 1;
+  if (sector > 6) {
     sector = 6; // Sector must be between 1 and 6
   }
 
@@ -238,11 +234,6 @@ space_vector get_space_vector(voltage_clark cur_clark) {
     break;
   }
 
-
-
-
-
-
   // Step 5: Store the results in the structure
   res.duty_a = duty_a;
   res.duty_b = duty_b;
@@ -251,17 +242,17 @@ space_vector get_space_vector(voltage_clark cur_clark) {
   return res;
 }
 
-void     motor_control(space_vector duty_cycle, pwm_config_space_vector pwm_a,
+void motor_control(space_vector duty_cycle, pwm_config_space_vector pwm_a,
                    pwm_config_space_vector pwm_b,
                    pwm_config_space_vector pwm_c) {
   pwm_set_chan_level(pwm_a.slice_num, pwm_a.chan_num,
                      (uint16_t)(duty_cycle.duty_a * PWM_RES));
-        pwm_set_chan_level(pwm_b.slice_num, pwm_b.chan_num,
-        (uint16_t)(duty_cycle.duty_b * PWM_RES));
+  pwm_set_chan_level(pwm_b.slice_num, pwm_b.chan_num,
+                     (uint16_t)(duty_cycle.duty_b * PWM_RES));
   pwm_set_chan_level(pwm_c.slice_num, pwm_c.chan_num,
                      (uint16_t)(duty_cycle.duty_c * PWM_RES));
 
-                gpio_put(EN1, duty_cycle.duty_a == 0 ? 0 : 1);
-    gpio_put(EN2, duty_cycle.duty_b == 0 ? 0 : 1);
-        gpio_put(EN3, duty_cycle.duty_c == 0 ? 0 : 1);
+  gpio_put(EN1, duty_cycle.duty_a == 0 ? 0 : 1);
+  gpio_put(EN2, duty_cycle.duty_b == 0 ? 0 : 1);
+  gpio_put(EN3, duty_cycle.duty_c == 0 ? 0 : 1);
 }
