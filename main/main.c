@@ -85,19 +85,6 @@ int main() {
   // Main loop
   while (1) {
 
-    // update current read
-    if (timer_currents_status) {
-      three_phase = get_current_ab();
-      quadrature = get_clark_transform(three_phase);
-      rotated = get_park_transform(quadrature);
-      reference_voltage = update_control(rotated);
-      quadrature_voltage = get_inverse_park_transform(rotated);
-      duty_cycle = get_space_vector(quadrature_voltage);
-      motor_control(duty_cycle, pwm_a, pwm_b, pwm_c);
-
-      timer_currents_status = 0;
-    }
-
     // Encoder handling
     if (encoder_status) {
       current_angle += 1.8; // Example increment for each encoder pulse
@@ -110,14 +97,17 @@ int main() {
       encoder_status = 0;
     }
 
-    // Move the motor based on the timer callback
-    // move_clockwise();
-    // move_clockwise_pwm(pwm_a, pwm_b, pwm_c);
-    // gpio_put(EN1, 1);
-    // gpio_put(EN2, 1);
-    // gpio_put(EN3, 1);
-    // pwm_set_chan_level(pwm_a_slice, pwm_a_chan, 4096 * 0.083);
-    // pwm_set_chan_level(pwm_b_slice, pwm_b_chan, 4096 * 0.167);
-    // pwm_set_chan_level(pwm_c_slice, pwm_c_chan, 4096 * 0.25);
+    // update current read
+    if (timer_currents_status) {
+      three_phase = get_current_ab();
+      quadrature = get_clark_transform(three_phase);
+      rotated = get_park_transform(quadrature);
+      reference_voltage = update_control(rotated);
+      quadrature_voltage = get_inverse_park_transform(rotated);
+      duty_cycle = get_space_vector(quadrature_voltage);
+      motor_control(duty_cycle, pwm_a, pwm_b, pwm_c);
+
+      timer_currents_status = 0;
+    }
   }
 }
