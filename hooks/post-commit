@@ -1,0 +1,14 @@
+#!/bin/sh
+files=$(git diff --name-only HEAD~1 | grep -E '\.(c|h)$')
+
+if [ -z "$files" ]; then
+    exit 0
+fi
+
+echo "Formatando arquivos com clang-format..."
+for file in $files; do
+    clang-format -i "$file"
+done
+
+git add $files
+git commit -m "Formatando código com clang-format após o commit"
