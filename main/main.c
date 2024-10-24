@@ -82,20 +82,7 @@ int main() {
   }
 
   printf("Motor started\n");
-  // Main loop
   while (1) {
-
-    // Encoder handling
-    if (encoder_status) {
-      current_angle += 1.8; // Example increment for each encoder pulse
-
-      // Reset the angle if it exceeds 360 degrees
-      if (current_angle >= 360.0) {
-        current_angle -= 360.0; // Reset by subtracting 360 degrees
-      }
-
-      encoder_status = 0;
-    }
 
     // update current read
     if (timer_currents_status) {

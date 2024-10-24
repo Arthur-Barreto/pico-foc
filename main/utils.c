@@ -20,7 +20,13 @@ int64_t alarm_callback(alarm_id_t id, void *user_data) {
 // Encoder interrupt callback
 void encoder_callback(uint gpio, uint32_t events) {
   if (gpio == ENCODER) {
-    encoder_status = 1;
+
+    current_angle += 1.8;
+
+    // Reset the angle if it exceeds 360 degrees
+    if (current_angle >= 360.0) {
+      current_angle -= 360.0;
+    }
   }
 }
 
@@ -53,11 +59,23 @@ void init_pwm(int pwm_pin_gp, uint resolution, uint *slice_num,
   gpio_set_function(pwm_pin_gp, GPIO_FUNC_PWM);
   uint slice = pwm_gpio_to_slice_num(pwm_pin_gp);
   uint chan = pwm_gpio_to_channel(pwm_pin_gp);
-  pwm_set_clkdiv(slice, 125); // pwm clock should now be running at 1MHz
-  pwm_set_wrap(slice, resolution);
-  pwm_set_chan_level(slice, PWM_CHAN_A, 0);
+
+  // Set the minimum clock divisor of 1.0 for high frequency
+  float clkdiv = 1.0f;
+
+  // Set the wrap value based on the desired resolution (wrap = resolution - 1)
+  pwm_set_wrap(slice, resolution - 1);
+
+  // Set the calculated clock divisor
+  pwm_set_clkdiv(slice, clkdiv);
+
+  // Initialize the PWM channel level to 0 (duty cycle)
+  pwm_set_chan_level(slice, chan, 0);
+
+  // Enable PWM on this slice
   pwm_set_enabled(slice, true);
 
+  // Pass back the slice and channel numbers
   *slice_num = slice;
   *chan_num = chan;
 }
