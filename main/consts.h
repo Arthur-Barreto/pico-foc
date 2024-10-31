@@ -2,6 +2,7 @@
 #define CONSTS_H
 
 #include <stdint.h>
+#include <math.h>
 
 // Pin definitions
 #define IN1 2
@@ -18,8 +19,19 @@
 #define PWM_FREQ 1e6
 #define PWM_RES 4096
 
+// define pin to generate pulse for foc
+#define FOC_PULSE 21
+#define FOC_PULSE_IN 20
+
 // motor voltage
 #define MOTOR_VOLTAGE 12
+
+// number of angles from encoder
+#define NUM_ANGLES 200
+// Number of angles within a single sector
+#define SECTOR_ANGLES 60
+// Step within each sector
+#define SECTOR_ANGLE_STEP (M_PI / 3 / NUM_ANGLES)
 
 // Conversion factor for ADC (3.3V / 12-bit resolution)
 extern const float CONVERSION_FACTOR;
@@ -31,6 +43,7 @@ extern const uint8_t en_seq[6][3];
 // Volatile variables that are shared between main loop and ISR
 extern volatile uint8_t timer_status;
 extern volatile uint8_t timer_currents_status;
+extern volatile uint8_t timer_foc_status;
 extern volatile uint8_t timer_fired;
 extern volatile uint8_t encoder_status;
 extern volatile uint8_t step_index;

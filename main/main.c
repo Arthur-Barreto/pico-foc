@@ -8,9 +8,21 @@ voltage_clark quadrature_voltage;
 space_vector duty_cycle;
 pwm_config_space_vector pwm_a, pwm_b, pwm_c;
 
+// #define TEST_F1 8
+// #define TEST_F2 9
+// #define TEST_F3 10
+// #define TEST_F4 11
+// #define TEST_F5 12
+// #define TEST_F6 13
+// #define TEST_F7 14
+// #define PIN_TEST 15
+// bool status = false;
+
 int main() {
   stdio_init_all();
   sleep_ms(2000);
+  clock_gpio_init(FOC_PULSE, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_CLK_SYS,
+                  12500);
 
   // Configure the GPIOs for the motor
   gpio_init(EN1);
@@ -20,6 +32,27 @@ int main() {
   gpio_set_dir(EN1, GPIO_OUT);
   gpio_set_dir(EN2, GPIO_OUT);
   gpio_set_dir(EN3, GPIO_OUT);
+
+  // gpio_init(PIN_TEST);
+  // gpio_set_dir(PIN_TEST, GPIO_OUT);
+
+  // gpio_init(TEST_F2);
+  // gpio_set_dir(TEST_F2, GPIO_OUT);
+
+  // gpio_init(TEST_F3);
+  // gpio_set_dir(TEST_F3, GPIO_OUT);
+
+  // gpio_init(TEST_F4);
+  // gpio_set_dir(TEST_F4, GPIO_OUT);
+
+  // gpio_init(TEST_F5);
+  // gpio_set_dir(TEST_F5, GPIO_OUT);
+
+  // gpio_init(TEST_F6);
+  // gpio_set_dir(TEST_F6, GPIO_OUT);
+
+  // gpio_init(TEST_F7);
+  // gpio_set_dir(TEST_F7, GPIO_OUT);
 
   // configure pwm for motor
   uint pwm_a_slice, pwm_a_chan;
@@ -46,27 +79,34 @@ int main() {
   gpio_set_dir(ENCODER, GPIO_IN);
   gpio_pull_up(ENCODER);
   gpio_set_irq_enabled_with_callback(ENCODER, GPIO_IRQ_EDGE_FALL, true,
-                                     &encoder_callback);
+                                     &extern_callback);
 
-  // Set up a repeating timer for motor control (10 Hz = 100 ms interval)
-  int timer_0_hz = 200;
-  repeating_timer_t timer_0;
+  // configure external interrupt for foc signal
+  gpio_init(FOC_PULSE_IN);
+  gpio_set_dir(FOC_PULSE_IN, GPIO_IN);
+  gpio_pull_up(FOC_PULSE_IN);
+  gpio_set_irq_enabled_with_callback(FOC_PULSE_IN, GPIO_IRQ_EDGE_FALL, true,
+                                     &extern_callback);
 
-  if (!add_repeating_timer_us(-1000000 / timer_0_hz, timer_0_callback, NULL,
-                              &timer_0)) {
-    printf("Failed to add timer\n");
-    return 1;
-  }
+  // // Set up a repeating timer for motor control (10 Hz = 100 ms interval)
+  // int timer_0_hz = 200;
+  // repeating_timer_t timer_0;
 
-  // set up timer to update current values
-  int timer_1_hz = 10000;
-  repeating_timer_t timer_1;
+  // if (!add_repeating_timer_us(-1000000 / timer_0_hz, timer_0_callback, NULL,
+  //                             &timer_0)) {
+  //   printf("Failed to add timer\n");
+  //   return 1;
+  // }
 
-  if (!add_repeating_timer_us(-1000000 / timer_1_hz, timer_1_callback, NULL,
-                              &timer_1)) {
-    printf("Failed to add timer 1\n");
-    return 1;
-  }
+  // // set up timer to update current values
+  // int timer_1_hz = 10000;
+  // repeating_timer_t timer_1;
+
+  // if (!add_repeating_timer_us(1000000 / timer_1_hz, timer_1_callback, NULL,
+  //                             &timer_1)) {
+  //   printf("Failed to add timer 1\n");
+  //   return 1;
+  // }
 
   // Align the rotor before starting the motor
   align_rotor(pwm_a, pwm_b, pwm_c);
@@ -81,11 +121,14 @@ int main() {
     move_clockwise_pwm(pwm_a, pwm_b, pwm_c);
   }
 
-  printf("Motor started\n");
+  initialize_trig_lookup();
+
+  // printf("Motor started\n");
   while (1) {
 
     // update current read
-    if (timer_currents_status) {
+    if (timer_foc_status) {
+
       three_phase = get_current_ab();
       quadrature = get_clark_transform(three_phase);
       rotated = get_park_transform(quadrature);
@@ -94,7 +137,10 @@ int main() {
       duty_cycle = get_space_vector(quadrature_voltage);
       motor_control(duty_cycle, pwm_a, pwm_b, pwm_c);
 
-      timer_currents_status = 0;
+      // gpio_put(PIN_TEST, status);
+      // status = !status;
+
+      timer_foc_status = 0;
     }
   }
 }

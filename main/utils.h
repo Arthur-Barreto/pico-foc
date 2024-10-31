@@ -3,6 +3,7 @@
 
 #include "consts.h"
 #include "hardware/adc.h"
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
 #include "pico/stdlib.h"
@@ -50,13 +51,14 @@ void init_pwm(int pwm_pin_gp, uint resolution, uint *slice_num, uint *chan_num);
 bool timer_0_callback(repeating_timer_t *rt);
 bool timer_1_callback(repeating_timer_t *rt);
 int64_t alarm_callback(alarm_id_t id, void *user_data);
-void encoder_callback(uint gpio, uint32_t events);
+void extern_callback(uint gpio, uint32_t events);
 void align_rotor(pwm_config_space_vector pwm_a, pwm_config_space_vector pwm_b,
                  pwm_config_space_vector pwm_c);
 void move_clockwise();
 void move_clockwise_pwm(pwm_config_space_vector pwm_a,
                         pwm_config_space_vector pwm_b,
                         pwm_config_space_vector pwm_c);
+void initialize_trig_lookup();
 current_ab get_current_ab();
 current_clark get_clark_transform(current_ab cur_ab);
 current_park get_park_transform(current_clark cur_clark);

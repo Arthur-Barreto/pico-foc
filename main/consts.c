@@ -10,6 +10,7 @@ const float CONVERSION_FACTOR = 3.3f / (1 << 12);
 
 volatile uint8_t timer_status = 0;
 volatile uint8_t timer_currents_status = 0;
+volatile uint8_t timer_foc_status = 0;
 volatile uint8_t timer_fired = 0;
 volatile uint8_t encoder_status = 0;
 volatile uint8_t step_index = 0;

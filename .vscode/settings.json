@@ -45,7 +45,8 @@
     "cstdint": "c",
     "utils.h": "c",
     "consts.h": "c",
-    "adc.h": "c"
+    "adc.h": "c",
+    "stdint.h": "c"
 }
 
      

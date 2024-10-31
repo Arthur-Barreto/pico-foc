@@ -1,4 +1,12 @@
 #include "utils.h"
+// #include "arm_math.h"
+
+float cos_lookup[NUM_ANGLES];
+float sin_lookup[NUM_ANGLES];
+
+float theta_ref_lookup[NUM_ANGLES];
+float sin_sector_lookup[NUM_ANGLES][2]; // [0] = sin(angle_in_sector), [1] =
+                                        // sin((pi/3) - angle_in_sector)
 
 // Timer callback to control motor movement
 bool timer_0_callback(repeating_timer_t *rt) {
@@ -18,7 +26,7 @@ int64_t alarm_callback(alarm_id_t id, void *user_data) {
 }
 
 // Encoder interrupt callback
-void encoder_callback(uint gpio, uint32_t events) {
+void extern_callback(uint gpio, uint32_t events) {
   if (gpio == ENCODER) {
 
     current_angle += 1.8;
@@ -27,6 +35,8 @@ void encoder_callback(uint gpio, uint32_t events) {
     if (current_angle >= 360.0) {
       current_angle -= 360.0;
     }
+  } else if (gpio == FOC_PULSE_IN) {
+    timer_foc_status = 1;
   }
 }
 
@@ -54,7 +64,7 @@ void align_rotor(pwm_config_space_vector pwm_a, pwm_config_space_vector pwm_b,
   gpio_put(EN3, 0);
 }
 
-void init_pwm(int pwm_pin_gp, uint resolution, uint *slice_num,
+void init_pwm(int pwm_pin_gp, uint wrap_value, uint *slice_num,
               uint *chan_num) {
   gpio_set_function(pwm_pin_gp, GPIO_FUNC_PWM);
   uint slice = pwm_gpio_to_slice_num(pwm_pin_gp);
@@ -63,8 +73,8 @@ void init_pwm(int pwm_pin_gp, uint resolution, uint *slice_num,
   // Set the minimum clock divisor of 1.0 for high frequency
   float clkdiv = 1.0f;
 
-  // Set the wrap value based on the desired resolution (wrap = resolution - 1)
-  pwm_set_wrap(slice, resolution - 1);
+  // Use the provided wrap value directly for better control
+  pwm_set_wrap(slice, wrap_value);
 
   // Set the calculated clock divisor
   pwm_set_clkdiv(slice, clkdiv);
@@ -125,6 +135,25 @@ void move_clockwise_pwm(pwm_config_space_vector pwm_a,
   }
 }
 
+void initialize_trig_lookup() {
+  // Populate cos_lookup and sin_lookup for 0 to 360 degrees in 1.8° increments
+  for (int i = 0; i < NUM_ANGLES; i++) {
+    float angle_rad =
+        i * (2 * M_PI / NUM_ANGLES); // Angle in radians from 0 to 2π
+    cos_lookup[i] = cos(angle_rad);
+    sin_lookup[i] = sin(angle_rad);
+  }
+
+  // Populate sin_sector_lookup for a single sector (0 to 60 degrees in radians)
+  for (int i = 0; i < SECTOR_ANGLES; i++) {
+    float angle_in_sector =
+        i * (M_PI / 3) / SECTOR_ANGLES; // Relative angle within 0 to π/3
+    sin_sector_lookup[i][0] = sin(angle_in_sector); // sin(angle_in_sector)
+    sin_sector_lookup[i][1] =
+        sin((M_PI / 3) - angle_in_sector); // sin((π/3) - angle_in_sector)
+  }
+}
+
 current_ab get_current_ab() {
   current_ab res;
   adc_select_input(0);
@@ -143,10 +172,17 @@ current_clark get_clark_transform(current_ab cur_ab) {
 
 current_park get_park_transform(current_clark cur_clark) {
   current_park res;
-  res.cur_d = cos(current_angle) * cur_clark.cur_alpha +
-              sin(current_angle) * cur_clark.cur_beta;
-  res.cur_q = -sin(current_angle) * cur_clark.cur_alpha +
-              cos(current_angle) * cur_clark.cur_beta;
+
+  // Calculate index based on the angle and step size
+  int index = (int)(current_angle / 1.8) % NUM_ANGLES;
+
+  // Use precomputed cosine and sine values
+  float cos_val = cos_lookup[index];
+  float sin_val = sin_lookup[index];
+
+  res.cur_d = cos_val * cur_clark.cur_alpha + sin_val * cur_clark.cur_beta;
+  res.cur_q = -sin_val * cur_clark.cur_alpha + cos_val * cur_clark.cur_beta;
+
   return res;
 }
 
@@ -155,8 +191,8 @@ voltage_pi update_control(current_park cur_park) {
   id_error = id_ref - cur_park.cur_d;
   iq_error = iq_ref - cur_park.cur_q;
 
-  id_integrator += id_error;
-  iq_integrator += iq_error;
+  id_integrator += id_error / 10000;
+  iq_integrator += iq_error / 10000;
 
   res.v_d = kp * id_error + ki * id_integrator;
   res.v_q = kp * iq_error + ki * iq_integrator;
@@ -180,39 +216,56 @@ voltage_pi update_control(current_park cur_park) {
 
 voltage_clark get_inverse_park_transform(current_park cur_park) {
   voltage_clark res;
-  res.v_alpha =
-      cos(current_angle) * cur_park.cur_d - sin(current_angle) * cur_park.cur_q;
-  res.v_beta =
-      sin(current_angle) * cur_park.cur_d + cos(current_angle) * cur_park.cur_q;
+
+  // Calculate index based on the angle and step size (1.8 degrees)
+  int index = (int)(current_angle / 1.8) % NUM_ANGLES;
+
+  // Retrieve the precomputed sine and cosine values
+  float cos_val = cos_lookup[index];
+  float sin_val = sin_lookup[index];
+
+  // Perform the inverse Park transform using the lookup values
+  res.v_alpha = cos_val * cur_park.cur_d - sin_val * cur_park.cur_q;
+  res.v_beta = sin_val * cur_park.cur_d + cos_val * cur_park.cur_q;
+
   return res;
 }
 
 space_vector get_space_vector(voltage_clark cur_clark) {
   space_vector res;
 
-  // Step 1: Calculate V_ref and theta_ref (in radians)
+  // Step 1: Calculate V_ref from v_alpha and v_beta
   float v_ref = sqrt(cur_clark.v_alpha * cur_clark.v_alpha +
                      cur_clark.v_beta * cur_clark.v_beta);
-  float theta_ref = atan2(cur_clark.v_beta, cur_clark.v_alpha);
 
-  // Step 2: Determine the sector (radians divided by pi/3, which is 60 degrees)
-  uint8_t sector = (uint8_t)(floor(theta_ref / (M_PI / 3))) + 1;
+  // Lookup for theta_ref based on v_alpha and v_beta
+  int theta_index = (int)((atan2(cur_clark.v_beta, cur_clark.v_alpha) *
+                           (NUM_ANGLES / (2 * M_PI))));
+  // int theta_index = (int)((
+  //     arm_atan2_f16((float16_t)cur_clark.v_beta,
+  //     (float16_t)cur_clark.v_alpha) * (NUM_ANGLES / (2 * M_PI))));
+  theta_index = theta_index < 0 ? theta_index + NUM_ANGLES : theta_index;
+  float theta_ref = theta_ref_lookup[theta_index];
+
+  // Determine the sector based on theta_ref
+  uint8_t sector = (uint8_t)(theta_ref / (M_PI / 3)) + 1;
   if (sector > 6) {
-    sector = 6; // Sector must be between 1 and 6
+    sector = 6;
   }
 
-  // Step 3: Calculate switching times T1, T2, T0 based on the sector
-  float ts = 1.0 / PWM_FREQ; // PWM period (1 MHz frequency as you specified)
-  float angle_in_sector =
-      theta_ref - (sector - 1) * (M_PI / 3); // Relative angle within sector
+  // Lookup for angle_in_sector sin values
+  int sector_index =
+      (int)((theta_ref - (sector - 1) * (M_PI / 3)) / SECTOR_ANGLE_STEP);
+  float sin_angle_in_sector = sin_sector_lookup[sector_index][0];
+  float sin_pi_3_minus_angle = sin_sector_lookup[sector_index][1];
 
-  float t1 = ts * (v_ref * sin((M_PI / 3) - angle_in_sector)) /
-             MOTOR_VOLTAGE; // Time for first active vector
-  float t2 = ts * (v_ref * sin(angle_in_sector)) /
-             MOTOR_VOLTAGE;  // Time for second active vector
-  float t0 = ts - (t1 + t2); // Zero vector time (remaining time)
+  // Calculate switching times T1, T2, T0 based on v_ref and motor voltage
+  float ts = 1.0 / PWM_FREQ; // PWM period
+  float t1 = ts * (v_ref * sin_pi_3_minus_angle) / MOTOR_VOLTAGE;
+  float t2 = ts * (v_ref * sin_angle_in_sector) / MOTOR_VOLTAGE;
+  float t0 = ts - (t1 + t2);
 
-  // Step 4: Calculate duty cycles for phases A, B, C
+  // Calculate duty cycles for phases A, B, C
   float duty_a, duty_b, duty_c;
   switch (sector) {
   case 1:
@@ -252,7 +305,7 @@ space_vector get_space_vector(voltage_clark cur_clark) {
     break;
   }
 
-  // Step 5: Store the results in the structure
+  // Store results in the space_vector structure
   res.duty_a = duty_a;
   res.duty_b = duty_b;
   res.duty_c = duty_c;
